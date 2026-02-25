@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Player } from "@/types/game";
-import { questions } from "@/data/questions";
+import { questions, Question } from "@/data/questions";
 import HealthBar from "./HealthBar";
 import Fighter from "./Fighter";
 import SimultaneousQuestion from "./SimultaneousQuestion";
@@ -10,12 +10,13 @@ interface BattleScreenProps {
   player1: Player;
   player2: Player;
   onGameEnd: (p1: Player, p2: Player) => void;
+  customQuestions?: Question[];
 }
 
 const TOTAL_QUESTIONS = 10;
 const DAMAGE = 20;
 
-const BattleScreen = ({ player1: initP1, player2: initP2, onGameEnd }: BattleScreenProps) => {
+const BattleScreen = ({ player1: initP1, player2: initP2, onGameEnd, customQuestions }: BattleScreenProps) => {
   const [p1, setP1] = useState<Player>({ ...initP1 });
   const [p2, setP2] = useState<Player>({ ...initP2 });
   const [currentQ, setCurrentQ] = useState(0);
@@ -29,9 +30,10 @@ const BattleScreen = ({ player1: initP1, player2: initP2, onGameEnd }: BattleScr
   p1Ref.current = p1;
   p2Ref.current = p2;
 
+  const sourceQuestions = customQuestions && customQuestions.length > 0 ? customQuestions : questions;
   const shuffledQuestions = useMemo(() => {
-    return [...questions].sort(() => Math.random() - 0.5).slice(0, TOTAL_QUESTIONS);
-  }, []);
+    return [...sourceQuestions].sort(() => Math.random() - 0.5).slice(0, TOTAL_QUESTIONS);
+  }, [sourceQuestions]);
 
   const advanceOrEnd = useCallback(
     (nextP1: Player, nextP2: Player) => {

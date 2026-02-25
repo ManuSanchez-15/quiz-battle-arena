@@ -2,9 +2,11 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { avatars, Avatar } from "@/data/avatars";
 import { Player } from "@/types/game";
+import { Question } from "@/data/questions";
+import ExcelUploader from "./ExcelUploader";
 
 interface SetupScreenProps {
-  onStartGame: (p1: Player, p2: Player) => void;
+  onStartGame: (p1: Player, p2: Player, customQuestions?: Question[]) => void;
 }
 
 const SetupScreen = ({ onStartGame }: SetupScreenProps) => {
@@ -13,6 +15,7 @@ const SetupScreen = ({ onStartGame }: SetupScreenProps) => {
   const [p2Name, setP2Name] = useState("");
   const [p1Avatar, setP1Avatar] = useState<Avatar | null>(null);
   const [p2Avatar, setP2Avatar] = useState<Avatar | null>(null);
+  const [customQuestions, setCustomQuestions] = useState<Question[]>([]);
 
   const currentName = step === 1 ? p1Name : p2Name;
   const setCurrentName = step === 1 ? setP1Name : setP2Name;
@@ -26,7 +29,8 @@ const SetupScreen = ({ onStartGame }: SetupScreenProps) => {
     } else if (step === 2 && p2Name && p2Avatar) {
       onStartGame(
         { name: p1Name, avatar: p1Avatar, health: 100, score: 0 },
-        { name: p2Name, avatar: p2Avatar, health: 100, score: 0 }
+        { name: p2Name, avatar: p2Avatar, health: 100, score: 0 },
+        customQuestions.length > 0 ? customQuestions : undefined
       );
     }
   };
@@ -116,6 +120,18 @@ const SetupScreen = ({ onStartGame }: SetupScreenProps) => {
             })}
           </div>
         </div>
+
+        {step === 1 && (
+          <div className="mb-6">
+            <label className="block text-sm font-semibold text-muted-foreground mb-2">
+              Preguntas personalizadas (opcional)
+            </label>
+            <ExcelUploader
+              onQuestionsLoaded={setCustomQuestions}
+              loadedCount={customQuestions.length}
+            />
+          </div>
+        )}
 
         <motion.button
           onClick={handleNext}
