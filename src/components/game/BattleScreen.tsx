@@ -1,10 +1,10 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Player } from "@/types/game";
 import { questions } from "@/data/questions";
 import HealthBar from "./HealthBar";
 import Fighter from "./Fighter";
-import QuestionCard from "./QuestionCard";
+import SimultaneousQuestion from "./SimultaneousQuestion";
 
 interface BattleScreenProps {
   player1: Player;
@@ -19,104 +19,115 @@ const BattleScreen = ({ player1: initP1, player2: initP2, onGameEnd }: BattleScr
   const [p1, setP1] = useState<Player>({ ...initP1 });
   const [p2, setP2] = useState<Player>({ ...initP2 });
   const [currentQ, setCurrentQ] = useState(0);
-  const [turn, setTurn] = useState<1 | 2>(1);
   const [attackingPlayer, setAttackingPlayer] = useState<1 | 2 | null>(null);
   const [hurtPlayer, setHurtPlayer] = useState<1 | 2 | null>(null);
   const [showTransition, setShowTransition] = useState(false);
   const [roundMessage, setRoundMessage] = useState("");
+  const [blocked, setBlocked] = useState(false);
+  const p1Ref = useRef(p1);
+  const p2Ref = useRef(p2);
+  p1Ref.current = p1;
+  p2Ref.current = p2;
 
   const shuffledQuestions = useMemo(() => {
     return [...questions].sort(() => Math.random() - 0.5).slice(0, TOTAL_QUESTIONS);
   }, []);
 
-  const handleAnswer = useCallback(
-    (isCorrect: boolean) => {
-      const attacker = turn;
-      const defender = turn === 1 ? 2 : 1;
+  const advanceOrEnd = useCallback(
+    (nextP1: Player, nextP2: Player) => {
+      if (nextP1.health <= 0 || nextP2.health <= 0 || currentQ >= TOTAL_QUESTIONS - 1) {
+        setTimeout(() => onGameEnd(nextP1, nextP2), 600);
+      } else {
+        setShowTransition(true);
+        setTimeout(() => {
+          setShowTransition(false);
+          setRoundMessage("");
+          setBlocked(false);
+          setCurrentQ((q) => q + 1);
+        }, 1200);
+      }
+    },
+    [currentQ, onGameEnd]
+  );
 
+  const handleResult = useCallback(
+    (result: { winner: 1 | 2 | "draw" | "timeout" }) => {
       setTimeout(() => {
-        if (isCorrect) {
-          setAttackingPlayer(attacker);
-          setHurtPlayer(defender);
-          setRoundMessage(
-            `¡${attacker === 1 ? p1.name : p2.name} ataca!`
-          );
-
-          if (defender === 2) {
-            setP2((prev) => ({
-              ...prev,
-              health: Math.max(0, prev.health - DAMAGE),
-            }));
-            setP1((prev) => ({ ...prev, score: prev.score + 1 }));
-          } else {
-            setP1((prev) => ({
-              ...prev,
-              health: Math.max(0, prev.health - DAMAGE),
-            }));
-            setP2((prev) => ({ ...prev, score: prev.score + 1 }));
-          }
-        } else {
-          setRoundMessage(
-            `¡${attacker === 1 ? p1.name : p2.name} falla!`
-          );
+        if (result.winner === "timeout") {
+          setRoundMessage("¡TIEMPO AGOTADO!");
+          setTimeout(() => {
+            advanceOrEnd(p1Ref.current, p2Ref.current);
+          }, 800);
+          return;
         }
+
+        if (result.winner === "draw") {
+          setBlocked(true);
+          setRoundMessage("¡BLOQUEADO!");
+          setTimeout(() => {
+            advanceOrEnd(p1Ref.current, p2Ref.current);
+          }, 800);
+          return;
+        }
+
+        const attacker = result.winner;
+        const defender = attacker === 1 ? 2 : 1;
+
+        setAttackingPlayer(attacker);
+        setHurtPlayer(defender);
+        setRoundMessage(`¡${attacker === 1 ? p1Ref.current.name : p2Ref.current.name} ataca!`);
+
+        let nextP1 = { ...p1Ref.current };
+        let nextP2 = { ...p2Ref.current };
+
+        if (attacker === 1) {
+          nextP2 = { ...nextP2, health: Math.max(0, nextP2.health - DAMAGE) };
+          nextP1 = { ...nextP1, score: nextP1.score + 1 };
+        } else {
+          nextP1 = { ...nextP1, health: Math.max(0, nextP1.health - DAMAGE) };
+          nextP2 = { ...nextP2, score: nextP2.score + 1 };
+        }
+
+        setP1(nextP1);
+        setP2(nextP2);
 
         setTimeout(() => {
           setAttackingPlayer(null);
           setHurtPlayer(null);
-
-          // Check end conditions
-          const nextP1Health = isCorrect && defender === 1 ? Math.max(0, p1.health - DAMAGE) : p1.health;
-          const nextP2Health = isCorrect && defender === 2 ? Math.max(0, p2.health - DAMAGE) : p2.health;
-
-          if (nextP1Health <= 0 || nextP2Health <= 0 || currentQ >= TOTAL_QUESTIONS - 1) {
-            setTimeout(() => {
-              onGameEnd(
-                { ...p1, health: nextP1Health, score: p1.score + (isCorrect && attacker === 1 ? 1 : 0) },
-                { ...p2, health: nextP2Health, score: p2.score + (isCorrect && attacker === 2 ? 1 : 0) }
-              );
-            }, 500);
-            return;
-          }
-
-          setShowTransition(true);
-          setTimeout(() => {
-            setShowTransition(false);
-            setRoundMessage("");
-            if (turn === 2) {
-              setCurrentQ((q) => q + 1);
-            }
-            setTurn(turn === 1 ? 2 : 1);
-          }, 1200);
+          advanceOrEnd(nextP1, nextP2);
         }, 800);
-      }, 500);
+      }, 300);
     },
-    [turn, p1, p2, currentQ, onGameEnd]
+    [advanceOrEnd]
   );
 
   return (
     <div className="min-h-screen bg-arena flex flex-col">
-      {/* Top: Health bars */}
+      {/* Health bars */}
       <div className="flex items-start justify-between p-4 md:p-6">
         <HealthBar health={p1.health} playerName={p1.name} player={1} />
         <div className="font-arcade text-accent text-shadow-neon-gold text-sm md:text-base mt-2">VS</div>
         <HealthBar health={p2.health} playerName={p2.name} player={2} flipped />
       </div>
 
-      {/* Middle: Fighters */}
-      <div className="flex items-center justify-between px-6 md:px-16 py-4">
+      {/* Fighters */}
+      <div className="flex items-center justify-between px-6 md:px-16 py-2">
         <Fighter
           avatar={p1.avatar}
           player={1}
           isAttacking={attackingPlayer === 1}
           isHurt={hurtPlayer === 1}
-          isIdle={!attackingPlayer && !hurtPlayer}
+          isIdle={!attackingPlayer && !hurtPlayer && !blocked}
         />
 
         <AnimatePresence>
           {roundMessage && (
             <motion.div
-              className="font-arcade text-xs md:text-sm text-accent text-shadow-neon-gold text-center"
+              className={`font-arcade text-xs md:text-sm text-center ${
+                blocked
+                  ? "text-secondary text-shadow-neon-blue"
+                  : "text-accent text-shadow-neon-gold"
+              }`}
               initial={{ opacity: 0, scale: 0.5 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
@@ -131,11 +142,11 @@ const BattleScreen = ({ player1: initP1, player2: initP2, onGameEnd }: BattleScr
           player={2}
           isAttacking={attackingPlayer === 2}
           isHurt={hurtPlayer === 2}
-          isIdle={!attackingPlayer && !hurtPlayer}
+          isIdle={!attackingPlayer && !hurtPlayer && !blocked}
         />
       </div>
 
-      {/* Bottom: Question */}
+      {/* Question area */}
       <div className="flex-1 px-4 pb-6">
         <AnimatePresence mode="wait">
           {showTransition ? (
@@ -146,23 +157,20 @@ const BattleScreen = ({ player1: initP1, player2: initP2, onGameEnd }: BattleScr
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              <span
-                className={`font-arcade text-lg ${
-                  turn === 2 ? "text-primary text-shadow-neon-red" : "text-secondary text-shadow-neon-blue"
-                }`}
-              >
-                TURNO JUGADOR {turn === 1 ? 2 : 1}
+              <span className="font-arcade text-lg text-accent text-shadow-neon-gold">
+                RONDA {Math.min(currentQ + 2, TOTAL_QUESTIONS)}
               </span>
             </motion.div>
           ) : (
             shuffledQuestions[currentQ] && (
-              <QuestionCard
-                key={`${currentQ}-${turn}`}
+              <SimultaneousQuestion
+                key={currentQ}
                 question={shuffledQuestions[currentQ]}
-                currentTurn={turn}
-                onAnswer={handleAnswer}
-                questionNumber={Math.floor(currentQ * 2 + (turn === 2 ? 2 : 1))}
-                totalQuestions={TOTAL_QUESTIONS * 2}
+                p1Name={p1.name}
+                p2Name={p2.name}
+                questionNumber={currentQ + 1}
+                totalQuestions={TOTAL_QUESTIONS}
+                onResult={handleResult}
               />
             )
           )}
