@@ -1,13 +1,42 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react";
+import { Player, GamePhase } from "@/types/game";
+import SetupScreen from "@/components/game/SetupScreen";
+import BattleScreen from "@/components/game/BattleScreen";
+import ResultScreen from "@/components/game/ResultScreen";
 
 const Index = () => {
+  const [phase, setPhase] = useState<GamePhase>("setup");
+  const [player1, setPlayer1] = useState<Player | null>(null);
+  const [player2, setPlayer2] = useState<Player | null>(null);
+
+  const handleStartGame = (p1: Player, p2: Player) => {
+    setPlayer1(p1);
+    setPlayer2(p2);
+    setPhase("battle");
+  };
+
+  const handleGameEnd = (p1: Player, p2: Player) => {
+    setPlayer1(p1);
+    setPlayer2(p2);
+    setPhase("result");
+  };
+
+  const handlePlayAgain = () => {
+    setPlayer1(null);
+    setPlayer2(null);
+    setPhase("setup");
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
+    <>
+      {phase === "setup" && <SetupScreen onStartGame={handleStartGame} />}
+      {phase === "battle" && player1 && player2 && (
+        <BattleScreen player1={player1} player2={player2} onGameEnd={handleGameEnd} />
+      )}
+      {phase === "result" && player1 && player2 && (
+        <ResultScreen player1={player1} player2={player2} onPlayAgain={handlePlayAgain} />
+      )}
+    </>
   );
 };
 
