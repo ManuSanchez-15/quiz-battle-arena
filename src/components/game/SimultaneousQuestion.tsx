@@ -93,14 +93,18 @@ const SimultaneousQuestion = ({
     const hasP1 = p1Answer !== null;
     const hasP2 = p2Answer !== null;
     if ((hasP1 && !hasP2) || (!hasP1 && hasP2)) {
+      // If the first answerer got it right → 1s grace; wrong → 2s grace
+      const firstAnswer = hasP1 ? p1AnswerRef.current : p2AnswerRef.current;
+      const isCorrect = firstAnswer === question.correctIndex;
+      const grace = isCorrect ? 1000 : 2000;
       const timer = setTimeout(() => {
         if (!resolvedRef.current) {
           resolve(p1AnswerRef.current, p2AnswerRef.current);
         }
-      }, 3000);
+      }, grace);
       return () => clearTimeout(timer);
     }
-  }, [p1Answer, p2Answer, resolved, resolve]);
+  }, [p1Answer, p2Answer, resolved, resolve, question.correctIndex]);
 
   // Timer
   useEffect(() => {
