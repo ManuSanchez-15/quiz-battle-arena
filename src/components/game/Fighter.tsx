@@ -85,9 +85,16 @@ const Fighter = ({ avatar, player, isAttacking, isHurt, isIdle }: FighterProps) 
     if (isHurt) {
       return {
         x: player === 1 ? [0, -20, 0] : [0, 20, 0],
+        scale: [1, 0.75, 0.75, 0.75, 0.75, 0.75, 0.75, 0.75],
+        opacity: [1, 0.2, 1, 0.2, 1, 0.2, 1, 0.2],
         filter: [
           "brightness(1)",
           "brightness(3) saturate(0)",
+          "brightness(1)",
+          "brightness(1)",
+          "brightness(1)",
+          "brightness(1)",
+          "brightness(1)",
           "brightness(1)",
         ],
       };
@@ -109,7 +116,9 @@ const Fighter = ({ avatar, player, isAttacking, isHurt, isIdle }: FighterProps) 
           ? { duration: 0.6, times: [0, 0.4, 0.6, 1], ease: "easeOut" }
           : isIdle
             ? { repeat: Infinity, duration: 1.5, ease: "easeInOut" }
-            : { duration: 0.4, ease: "easeOut" }
+            : isHurt
+              ? { duration: 2, ease: "easeOut" }
+              : { duration: 0.4, ease: "easeOut" }
       }
     >
       <img

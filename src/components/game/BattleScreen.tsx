@@ -97,7 +97,7 @@ const BattleScreen = ({ player1: initP1, player2: initP2, onGameEnd, customQuest
           setAttackingPlayer(null);
           setHurtPlayer(null);
           advanceOrEnd(nextP1, nextP2);
-        }, 800);
+        }, 2200);
       }, 300);
     },
     [advanceOrEnd]
