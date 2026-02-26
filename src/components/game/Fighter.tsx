@@ -8,6 +8,7 @@ interface FighterProps {
   isAttacking: boolean;
   isHurt: boolean;
   isIdle: boolean;
+  dashDistance?: number;
 }
 
 // Create explosion sound using Web Audio API
@@ -58,13 +59,12 @@ const playExplosionSound = () => {
   }
 };
 
-const Fighter = ({ avatar, player, isAttacking, isHurt, isIdle }: FighterProps) => {
+const Fighter = ({ avatar, player, isAttacking, isHurt, isIdle, dashDistance = 300 }: FighterProps) => {
   const hasPlayedSound = useRef(false);
 
   useEffect(() => {
     if (isAttacking && !hasPlayedSound.current) {
       hasPlayedSound.current = true;
-      // Play sound at the moment of "impact" (midway through dash)
       setTimeout(() => playExplosionSound(), 250);
     }
     if (!isAttacking) {
@@ -74,10 +74,9 @@ const Fighter = ({ avatar, player, isAttacking, isHurt, isIdle }: FighterProps) 
 
   const getAnimation = () => {
     if (isAttacking) {
-      // Dash far toward opponent then return
-      const dashDistance = player === 1 ? 180 : -180;
+      const dist = player === 1 ? dashDistance : -dashDistance;
       return {
-        x: [0, dashDistance, dashDistance, 0],
+        x: [0, dist, dist, 0],
         scale: [1, 1.1, 1.1, 1],
         rotate: player === 1 ? [0, 3, 0, 0] : [0, -3, 0, 0],
       };

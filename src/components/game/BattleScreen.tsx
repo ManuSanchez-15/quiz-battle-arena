@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Player } from "@/types/game";
 import { questions, Question } from "@/data/questions";
@@ -27,8 +27,25 @@ const BattleScreen = ({ player1: initP1, player2: initP2, onGameEnd, customQuest
   const [blocked, setBlocked] = useState(false);
   const p1Ref = useRef(p1);
   const p2Ref = useRef(p2);
+  const fighter1Ref = useRef<HTMLDivElement>(null);
+  const fighter2Ref = useRef<HTMLDivElement>(null);
+  const [fighterDistance, setFighterDistance] = useState(300);
   p1Ref.current = p1;
   p2Ref.current = p2;
+
+  // Measure distance between fighters
+  useEffect(() => {
+    const measure = () => {
+      if (fighter1Ref.current && fighter2Ref.current) {
+        const r1 = fighter1Ref.current.getBoundingClientRect();
+        const r2 = fighter2Ref.current.getBoundingClientRect();
+        setFighterDistance(Math.abs(r2.left - r1.left - r1.width));
+      }
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
 
   const sourceQuestions = customQuestions && customQuestions.length > 0 ? customQuestions : questions;
   const shuffledQuestions = useMemo(() => {
@@ -114,13 +131,16 @@ const BattleScreen = ({ player1: initP1, player2: initP2, onGameEnd, customQuest
 
       {/* Fighters */}
       <div className="flex items-center justify-between px-6 md:px-16 py-2">
-        <Fighter
-          avatar={p1.avatar}
-          player={1}
-          isAttacking={attackingPlayer === 1}
-          isHurt={hurtPlayer === 1}
-          isIdle={!attackingPlayer && !hurtPlayer && !blocked}
-        />
+        <div ref={fighter1Ref}>
+          <Fighter
+            avatar={p1.avatar}
+            player={1}
+            isAttacking={attackingPlayer === 1}
+            isHurt={hurtPlayer === 1}
+            isIdle={!attackingPlayer && !hurtPlayer && !blocked}
+            dashDistance={fighterDistance}
+          />
+        </div>
 
         <AnimatePresence>
           {roundMessage && (
@@ -139,13 +159,16 @@ const BattleScreen = ({ player1: initP1, player2: initP2, onGameEnd, customQuest
           )}
         </AnimatePresence>
 
-        <Fighter
-          avatar={p2.avatar}
-          player={2}
-          isAttacking={attackingPlayer === 2}
-          isHurt={hurtPlayer === 2}
-          isIdle={!attackingPlayer && !hurtPlayer && !blocked}
-        />
+        <div ref={fighter2Ref}>
+          <Fighter
+            avatar={p2.avatar}
+            player={2}
+            isAttacking={attackingPlayer === 2}
+            isHurt={hurtPlayer === 2}
+            isIdle={!attackingPlayer && !hurtPlayer && !blocked}
+            dashDistance={fighterDistance}
+          />
+        </div>
       </div>
 
       {/* Question area */}
